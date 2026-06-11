@@ -1,0 +1,887 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NREMT Paramedic — Study Command</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#07101a;--card:#0e1e2e;--card2:#152540;
+  --red:#e63946;--red2:#ff6b6b;--teal:#2ec4b6;--gold:#f4a261;
+  --text:#f0f4f8;--muted:rgba(240,244,248,.62);--dim:rgba(240,244,248,.35);
+  --border:rgba(255,255,255,.09);--correct:#2ecc71;--wrong:#e74c3c;
+}
+html,body{height:100%;overflow:hidden;font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text)}
+/* NAV */
+#nav{display:flex;background:#050d16;border-bottom:1px solid var(--border);overflow-x:auto;flex-shrink:0}
+.nav-btn{flex:1;min-width:100px;padding:14px 6px;border:none;background:none;color:var(--dim);font-size:11px;letter-spacing:.12em;text-transform:uppercase;cursor:pointer;border-bottom:2px solid transparent;transition:all .18s;font-weight:600;white-space:nowrap}
+.nav-btn:hover{color:var(--text);background:rgba(255,255,255,.03)}
+.nav-btn.active{color:var(--red2);border-bottom-color:var(--red)}
+/* PANELS */
+#app{display:flex;flex-direction:column;height:100vh}
+.panel{display:none;flex:1;overflow-y:auto;padding:20px}
+.panel.active{display:block}
+/* COMMAND CENTER */
+.cc-header{text-align:center;padding:20px 0 30px}
+.cc-title{font-size:28px;font-weight:800;letter-spacing:.04em;color:var(--red2);text-transform:uppercase}
+.cc-sub{font-size:13px;color:var(--muted);margin-top:6px;letter-spacing:.06em}
+.stat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:24px}
+.stat-card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px;text-align:center}
+.stat-num{font-size:32px;font-weight:800;color:var(--red2)}
+.stat-lbl{font-size:10px;color:var(--dim);text-transform:uppercase;letter-spacing:.12em;margin-top:4px}
+.cat-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:24px}
+.cat-card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px;cursor:pointer;transition:all .18s}
+.cat-card:hover{background:var(--card2);border-color:rgba(230,57,70,.4)}
+.cat-name{font-size:13px;font-weight:700;margin-bottom:6px}
+.cat-pct{font-size:11px;color:var(--dim);margin-bottom:8px}
+.cat-bar{height:4px;background:rgba(255,255,255,.1);border-radius:2px}
+.cat-fill{height:4px;border-radius:2px;background:var(--red);transition:width .4s}
+.cat-score{font-size:11px;color:var(--muted);margin-top:6px}
+.action-row{display:flex;gap:10px;margin-bottom:20px}
+.btn-primary{flex:1;padding:14px;background:var(--red);border:none;border-radius:8px;color:#fff;font-size:13px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;cursor:pointer;transition:all .18s}
+.btn-primary:hover{background:#c62d3a}
+.btn-sec{flex:1;padding:14px;background:var(--card);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:13px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;cursor:pointer;transition:all .18s}
+.btn-sec:hover{background:var(--card2)}
+/* QUIZ */
+.quiz-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}
+.quiz-progress{font-size:12px;color:var(--dim);letter-spacing:.08em}
+.quiz-cat-badge{font-size:10px;padding:3px 10px;border-radius:20px;font-weight:700;letter-spacing:.08em;text-transform:uppercase}
+.badge-A{background:rgba(46,196,182,.15);color:var(--teal);border:1px solid rgba(46,196,182,.3)}
+.badge-C{background:rgba(230,57,70,.15);color:var(--red2);border:1px solid rgba(230,57,70,.3)}
+.badge-T{background:rgba(244,162,97,.15);color:var(--gold);border:1px solid rgba(244,162,97,.3)}
+.badge-M{background:rgba(123,104,238,.15);color:#a78bfa;border:1px solid rgba(123,104,238,.3)}
+.badge-O{background:rgba(74,222,128,.15);color:#4ade80;border:1px solid rgba(74,222,128,.3)}
+.question-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:22px;margin-bottom:16px}
+.question-num{font-size:10px;color:var(--dim);letter-spacing:.12em;text-transform:uppercase;margin-bottom:10px}
+.question-text{font-size:16px;line-height:1.6;color:var(--text);font-weight:500}
+.options{display:flex;flex-direction:column;gap:8px;margin-top:16px}
+.option{padding:13px 16px;background:var(--card2);border:1.5px solid var(--border);border-radius:8px;cursor:pointer;font-size:14px;color:var(--text);transition:all .18s;text-align:left;display:flex;align-items:flex-start;gap:10px}
+.option:hover:not(.disabled){background:rgba(230,57,70,.1);border-color:rgba(230,57,70,.4)}
+.option.correct{background:rgba(46,204,113,.12);border-color:var(--correct);color:#a7f3d0}
+.option.wrong{background:rgba(231,76,60,.12);border-color:var(--wrong);color:#fca5a5}
+.option.disabled{cursor:default}
+.opt-letter{font-weight:800;color:var(--dim);min-width:18px;font-size:13px}
+.rationale-box{background:rgba(46,196,182,.06);border:1px solid rgba(46,196,182,.25);border-radius:10px;padding:18px;margin-bottom:12px;display:none}
+.rationale-box.show{display:block}
+.rationale-title{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--teal);font-weight:700;margin-bottom:8px}
+.rationale-text{font-size:14px;line-height:1.65;color:var(--muted)}
+.resources-box{background:rgba(244,162,97,.06);border:1px solid rgba(244,162,97,.25);border-radius:10px;padding:14px;margin-bottom:16px;display:none}
+.resources-box.show{display:block}
+.resources-title{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--gold);font-weight:700;margin-bottom:8px}
+.resources-list{list-style:none;display:flex;flex-direction:column;gap:5px}
+.resources-list a{color:var(--gold);font-size:13px;text-decoration:none;display:flex;align-items:center;gap:6px}
+.resources-list a:hover{text-decoration:underline}
+.quiz-nav{display:flex;gap:10px;margin-top:4px}
+.score-strip{display:flex;gap:6px;margin-bottom:16px}
+.score-dot{width:10px;height:10px;border-radius:50%;background:var(--border)}
+.score-dot.c{background:var(--correct)}
+.score-dot.w{background:var(--wrong)}
+/* DRUG DECK */
+.drug-controls{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap}
+.filter-chip{padding:5px 12px;border-radius:20px;border:1px solid var(--border);background:var(--card);color:var(--dim);font-size:11px;cursor:pointer;font-weight:600;transition:all .18s}
+.filter-chip.active{background:rgba(230,57,70,.15);border-color:var(--red);color:var(--red2)}
+.drug-card{background:var(--card);border:1px solid var(--border);border-radius:12px;margin-bottom:12px;overflow:hidden;cursor:pointer;transition:all .18s}
+.drug-card:hover{border-color:rgba(230,57,70,.4)}
+.drug-front{padding:16px 18px;display:flex;justify-content:space-between;align-items:center}
+.drug-name{font-size:16px;font-weight:800;color:var(--text)}
+.drug-class{font-size:11px;color:var(--dim);margin-top:3px}
+.drug-expand{color:var(--dim);font-size:18px;transition:transform .2s}
+.drug-body{display:none;padding:0 18px 18px;border-top:1px solid var(--border);margin-top:0}
+.drug-body.open{display:block}
+.drug-row{display:grid;grid-template-columns:120px 1fr;gap:6px;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.05);font-size:13px}
+.drug-row:last-child{border:none}
+.drug-lbl{color:var(--dim);font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.08em;padding-top:2px}
+.drug-val{color:var(--text);line-height:1.55}
+.drug-val.warn{color:#fbbf24}
+.drug-val.danger{color:var(--red2)}
+/* RHYTHM READ */
+.rhythm-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:18px;margin-bottom:12px}
+.rhythm-strip{background:#0a1628;border:1px solid rgba(46,196,182,.2);border-radius:8px;padding:14px;margin:12px 0;font-family:monospace;font-size:12px;color:var(--teal);line-height:1.8;letter-spacing:.04em}
+.rhythm-name{font-size:18px;font-weight:800;color:var(--text);margin-bottom:6px}
+.rhythm-vitals{display:flex;gap:16px;flex-wrap:wrap;margin-bottom:12px}
+.rv{font-size:12px;color:var(--dim)}
+.rv span{color:var(--text);font-weight:700}
+.rhythm-key{background:rgba(244,162,97,.06);border:1px solid rgba(244,162,97,.2);border-radius:8px;padding:12px;margin-bottom:10px}
+.rhythm-key-title{font-size:10px;color:var(--gold);letter-spacing:.12em;text-transform:uppercase;font-weight:700;margin-bottom:6px}
+.rhythm-key-list{font-size:13px;color:var(--muted);line-height:1.7}
+.rhythm-tx{background:rgba(46,204,113,.06);border:1px solid rgba(46,204,113,.2);border-radius:8px;padding:12px}
+.rhythm-tx-title{font-size:10px;color:var(--correct);letter-spacing:.12em;text-transform:uppercase;font-weight:700;margin-bottom:6px}
+/* SCENARIO */
+.scenario-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:20px;margin-bottom:16px}
+.scenario-badge{font-size:10px;padding:3px 10px;border-radius:20px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;display:inline-block;margin-bottom:10px}
+.dispatch-box{background:#050d16;border-left:3px solid var(--red);border-radius:6px;padding:12px 14px;margin:12px 0;font-size:13px;color:var(--muted);line-height:1.6;font-family:monospace}
+.dispatch-hdr{font-size:10px;color:var(--red2);letter-spacing:.14em;font-weight:700;margin-bottom:4px}
+.scene-steps{margin-top:14px}
+.step{border:1px solid var(--border);border-radius:8px;margin-bottom:8px;overflow:hidden}
+.step-q{padding:12px 14px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;font-size:14px;font-weight:600}
+.step-a{display:none;padding:10px 14px;font-size:13px;color:var(--muted);line-height:1.6;background:rgba(255,255,255,.02);border-top:1px solid var(--border)}
+.step-a.show{display:block}
+/* MISC */
+.section-title{font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--dim);font-weight:700;margin-bottom:14px;padding-bottom:8px;border-bottom:1px solid var(--border)}
+.empty-state{text-align:center;padding:40px 20px;color:var(--dim)}
+.timer-bar{height:3px;background:rgba(255,255,255,.1);border-radius:2px;margin-bottom:16px;overflow:hidden}
+.timer-fill{height:3px;background:var(--red);border-radius:2px;transition:width .1s linear}
+.correct-flash{animation:flash-green .4s ease}
+.wrong-flash{animation:flash-red .4s ease}
+@keyframes flash-green{0%{background:rgba(46,204,113,.3)}100%{background:var(--card)}}
+@keyframes flash-red{0%{background:rgba(231,76,60,.3)}100%{background:var(--card)}}
+::-webkit-scrollbar{width:4px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:rgba(255,255,255,.12);border-radius:2px}
+</style>
+</head>
+<body>
+<div id="app">
+<div id="nav">
+  <button class="nav-btn active" onclick="showPanel('home')">⚡ Command</button>
+  <button class="nav-btn" onclick="showPanel('quiz')">🎯 Quiz Strike</button>
+  <button class="nav-btn" onclick="showPanel('random')">🎲 Random</button>
+  <button class="nav-btn" onclick="showPanel('drugs')">💊 Drug Deck</button>
+  <button class="nav-btn" onclick="showPanel('rhythms')">❤️ Rhythms</button>
+  <button class="nav-btn" onclick="showPanel('scenarios')">🚨 Scenarios</button>
+</div>
+
+<!-- COMMAND CENTER -->
+<div class="panel active" id="panel-home">
+  <div class="cc-header">
+    <div class="cc-title">⚕ Study Command</div>
+    <div class="cc-sub">NREMT Paramedic Certification Prep</div>
+  </div>
+  <div class="stat-grid">
+    <div class="stat-card"><div class="stat-num" id="st-total">0</div><div class="stat-lbl">Answered</div></div>
+    <div class="stat-card"><div class="stat-num" id="st-pct" style="color:var(--teal)">—</div><div class="stat-lbl">Accuracy</div></div>
+    <div class="stat-card"><div class="stat-num" id="st-streak" style="color:var(--gold)">0</div><div class="stat-lbl">Streak 🔥</div></div>
+  </div>
+  <div class="section-title">NREMT Content Breakdown</div>
+  <div class="cat-grid" id="cat-grid"></div>
+  <div class="action-row">
+    <button class="btn-primary" onclick="showPanel('random');startRandom()">🎲 Random Question</button>
+    <button class="btn-sec" onclick="resetProgress()">↺ Reset Progress</button>
+  </div>
+  <div class="action-row">
+    <button class="btn-sec" onclick="showPanel('quiz')">📋 Full Quiz Mode</button>
+    <button class="btn-sec" onclick="window.open('https://www.nremt.org/EMT/About_Exams/cognitive_exam','_blank')">🌐 NREMT.org</button>
+  </div>
+  <div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px;margin-top:4px">
+    <div class="section-title" style="margin-bottom:8px">NREMT CAT Test Format</div>
+    <div style="font-size:13px;color:var(--muted);line-height:1.8">
+      📌 Computer Adaptive Test — 80 to 150 questions<br>
+      📌 Minimum passing standard: ~70% in each content area<br>
+      📌 2-hour time limit<br>
+      📌 Airway 18-22% · Cardiology 20-24% · Trauma 14-18% · Medical 27-31% · Operations 10-14%
+    </div>
+  </div>
+</div>
+
+<!-- QUIZ STRIKE (by category) -->
+<div class="panel" id="panel-quiz">
+  <div id="quiz-cat-select">
+    <div class="section-title">Select Category</div>
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <button class="btn-primary" onclick="startQuiz('all')">All Categories</button>
+      <button class="btn-sec" onclick="startQuiz('A')">Airway, Respiration & Ventilation</button>
+      <button class="btn-sec" onclick="startQuiz('C')">Cardiology & Resuscitation</button>
+      <button class="btn-sec" onclick="startQuiz('T')">Trauma</button>
+      <button class="btn-sec" onclick="startQuiz('M')">Medical / OB / Pediatrics</button>
+      <button class="btn-sec" onclick="startQuiz('O')">EMS Operations</button>
+    </div>
+  </div>
+  <div id="quiz-area" style="display:none"></div>
+</div>
+
+<!-- RANDOM QUESTION -->
+<div class="panel" id="panel-random">
+  <div id="random-area"></div>
+</div>
+
+<!-- DRUG DECK -->
+<div class="panel" id="panel-drugs">
+  <div class="section-title">Paramedic Pharmacology</div>
+  <div class="drug-controls">
+    <button class="filter-chip active" onclick="filterDrugs('all',this)">All</button>
+    <button class="filter-chip" onclick="filterDrugs('cardiac',this)">Cardiac</button>
+    <button class="filter-chip" onclick="filterDrugs('airway',this)">Airway/RSI</button>
+    <button class="filter-chip" onclick="filterDrugs('metabolic',this)">Metabolic</button>
+    <button class="filter-chip" onclick="filterDrugs('neuro',this)">Neuro/Pain</button>
+    <button class="filter-chip" onclick="filterDrugs('other',this)">Other</button>
+  </div>
+  <div id="drug-list"></div>
+</div>
+
+<!-- RHYTHMS -->
+<div class="panel" id="panel-rhythms">
+  <div class="section-title">ECG Rhythm Recognition</div>
+  <div id="rhythm-list"></div>
+</div>
+
+<!-- SCENARIOS -->
+<div class="panel" id="panel-scenarios">
+  <div class="section-title">Clinical Scenarios</div>
+  <div id="scenario-list"></div>
+</div>
+</div>
+
+<script>
+// ══════════════════════════════════
+// DATA
+// ══════════════════════════════════
+const CAT_NAMES={A:'Airway',C:'Cardiology',T:'Trauma',M:'Medical',O:'Operations'};
+const CAT_PCT={A:'18-22%',C:'20-24%',T:'14-18%',M:'27-31%',O:'10-14%'};
+
+const QUESTIONS=[
+// ── AIRWAY ──
+{id:'A01',cat:'A',q:'After RSI with succinylcholine, waveform capnography shows ETCO₂ drops from 38 to 4 mmHg. Most likely cause?',
+opts:['Right mainstem intubation','Esophageal intubation','Hyperventilation','Bronchospasm'],ans:1,
+rationale:'A sudden near-zero ETCO₂ immediately post-intubation is esophageal intubation until proven otherwise. Esophageal placement produces trace CO₂ that quickly drops to zero. Right mainstem would still show CO₂; hyperventilation lowers CO₂ but not this dramatically.',
+links:[{t:'NREMT Airway Content',u:'https://www.nremt.org'},{t:'Capnography in EMS (ACEP)',u:'https://www.acep.org'},{t:'EMCrit: Waveform Capnography',u:'https://emcrit.org/ibcc/capnography/'}]},
+
+{id:'A02',cat:'A',q:'Capnography shows a "shark fin" (upsloping plateau) waveform pattern. This indicates?',
+opts:['Esophageal intubation','Bronchospasm / air trapping','Correct placement with normal ventilation','Cardiac arrest without ROSC'],ans:1,
+rationale:'The shark fin (curvilinear upslope) replaces the normal square wave plateau when alveoli empty unevenly due to bronchospasm or COPD. The prolonged, sloped exhalation phase is the hallmark.',
+links:[{t:'Capnography waveforms explained',u:'https://www.capnography.com'},{t:'PulmCrit: Waveform Interpretation',u:'https://emcrit.org/pulmcrit/'}]},
+
+{id:'A03',cat:'A',q:'Succinylcholine is CONTRAINDICATED in which patient?',
+opts:['45yo with suspected head injury','Patient 72 hours post-crush injury to legs','Patient on warfarin','Hypertensive patient'],ans:1,
+rationale:'After 24-72+ hours of crush injury, burns, denervation, or prolonged immobility, upregulation of extrajunctional ACh receptors causes massive potassium efflux with succinylcholine → potentially fatal hyperkalemia. The normal 0.5-1.0 mEq/L rise becomes 5-10+ mEq/L.',
+links:[{t:'Succinylcholine contraindications (UpToDate)',u:'https://www.uptodate.com'},{t:'StatPearls: Succinylcholine',u:'https://www.ncbi.nlm.nih.gov/books/NBK499984/'}]},
+
+{id:'A04',cat:'A',q:'A 6-year-old requires intubation. Broselow tape indicates a 5.0 ETT. Correct oral depth?',
+opts:['12 cm','15 cm','18 cm','21 cm'],ans:1,
+rationale:'Pediatric ETT depth formula: tube size × 3 = 5.0 × 3 = 15 cm at the lip. Alternatively, use the formula: (age/2) + 12. Confirm with bilateral breath sounds and waveform capnography.',
+links:[{t:'Pediatric Airway Management (PALS)',u:'https://cpr.heart.org'},{t:'Broselow tape reference',u:'https://www.ncbi.nlm.nih.gov/pmc/articles/PMC4553993/'}]},
+
+{id:'A05',cat:'A',q:'Primary limitation of needle cricothyrotomy (14g angiocath) in adults?',
+opts:['Cannot provide oxygenation','CO₂ retention — cannot ventilate adequately','Requires surgical training','High risk of tracheal laceration'],ans:1,
+rationale:'Needle cric provides oxygenation (O₂ in) but inadequate ventilation — CO₂ builds rapidly because passive exhalation through a 14g catheter is severely limited. It buys 30-45 minutes max before hypercapnia becomes critical. Surgical cric is definitive.',
+links:[{t:'Cricothyrotomy techniques (EMCrit)',u:'https://emcrit.org/ibcc/cric/'},{t:'StatPearls: Cricothyrotomy',u:'https://www.ncbi.nlm.nih.gov/books/NBK459145/'}]},
+
+{id:'A06',cat:'A',q:'Target ETCO₂ for a patient with suspected traumatic brain injury (TBI)?',
+opts:['25-30 mmHg','35-40 mmHg','45-50 mmHg','55-60 mmHg'],ans:1,
+rationale:'Target ETCO₂ 35-40 mmHg for TBI. Prophylactic hyperventilation (ETCO₂ <35) causes cerebral vasoconstriction and worsens ischemia. Reserve brief hyperventilation (30-35) ONLY for acute herniation (Cushing\'s triad). Normal ventilation preserves cerebral perfusion.',
+links:[{t:'Brain Trauma Foundation Guidelines',u:'https://www.braintrauma.org'},{t:'TBI Prehospital Management',u:'https://www.jems.com'}]},
+
+{id:'A07',cat:'A',q:'During BVM ventilation, you notice gastric distension developing. Next action?',
+opts:['Increase tidal volume','Insert OPA and continue','Place OG/NG tube to decompress','Switch to 2-person BVM technique'],ans:2,
+rationale:'Gastric distension increases aspiration risk and restricts diaphragm movement. Insert OG/NG to decompress. Also reassess BVM seal and reduce tidal volume (500-600 mL, visible chest rise). Prevention: avoid excessive peak airway pressure.',
+links:[{t:'BVM Ventilation Best Practices',u:'https://www.naemsp.org'},{t:'Gastric insufflation in BLS',u:'https://pubmed.ncbi.nlm.nih.gov'}]},
+
+{id:'A08',cat:'A',q:'ETCO₂ suddenly drops from 40 to 6 mmHg 10 minutes into transport. First action?',
+opts:['Increase ventilation rate','Sodium bicarbonate 1 mEq/kg','Immediately confirm tube placement — auscultate bilaterally','Notify receiving facility'],ans:2,
+rationale:'Any sudden ETCO₂ drop = tube displacement until proven otherwise. DOPE: Dislodgement, Obstruction, Pneumothorax, Equipment failure. Auscultate immediately, visualize tube at lips, consider direct laryngoscopy. Every second of unrecognized dislodgement costs oxygen.',
+links:[{t:'DOPE mnemonic in intubated patients',u:'https://emcrit.org'},{t:'Post-intubation management',u:'https://www.jems.com'}]},
+
+// ── CARDIOLOGY ──
+{id:'C01',cat:'C',q:'ST elevation in leads II, III, and aVF. Which vessel is most likely occluded?',
+opts:['Left Anterior Descending (LAD)','Right Coronary Artery (RCA)','Left Circumflex (LCx)','Left Main'],ans:1,
+rationale:'Inferior STEMI (II, III, aVF) = RCA in 85% of cases. CRITICAL: always get right-sided leads (V4R) to rule out RV involvement — RV MI requires fluid resuscitation and makes nitroglycerin dangerous (preload-dependent). LCx occlusion causes lateral/posterior MI.',
+links:[{t:'AHA STEMI Guidelines 2023',u:'https://www.ahajournals.org'},{t:'Right-sided leads in inferior MI',u:'https://litfl.com/right-sided-ecg-lead-placement/'},{t:'Life in the Fast Lane: Inferior STEMI',u:'https://litfl.com/inferior-stemi-ecg-library/'}]},
+
+{id:'C02',cat:'C',q:'Patient in pulseless VF. After first 200J biphasic shock, VF continues. Immediate next step?',
+opts:['Shock again immediately at 360J','CPR 2 minutes → reassess','Epinephrine 1mg now → shock','Amiodarone 300mg → shock'],ans:1,
+rationale:'Post-shock: IMMEDIATELY resume CPR for 2 minutes — do not delay for rhythm check. Chest compressions deliver amiodarone and epinephrine more effectively when given during CPR. Rhythm check and pulse check occur AFTER the 2-minute cycle.',
+links:[{t:'AHA ACLS Guidelines 2020',u:'https://cpr.heart.org'},{t:'VF/VT Algorithm',u:'https://www.acls.net/vfib-vtach-algorithm.htm'}]},
+
+{id:'C03',cat:'C',q:'Which 12-lead finding is most specific for RIGHT ventricular MI?',
+opts:['ST elevation V1-V2','ST elevation in V4R (right-sided lead)','RBBB pattern','Q waves in II, III, aVF'],ans:1,
+rationale:'V4R ST elevation >1mm is the hallmark of RV MI. RV infarct complicates 30-50% of inferior STEMIs. These patients are preload-dependent — nitroglycerin can cause catastrophic hypotension. Treat with IV fluids (250-500 mL bolus), avoid vasodilators.',
+links:[{t:'RV MI recognition and management',u:'https://litfl.com/right-ventricular-infarction-ecg/'},{t:'Right-sided ECG leads in EMS',u:'https://www.jems.com'}]},
+
+{id:'C04',cat:'C',q:'Unstable patient with rapid irregular rhythm, HR 160, BP 72/40, AMS. Treatment?',
+opts:['Adenosine 6mg rapid IVP','Diltiazem 0.25 mg/kg IV','Synchronized cardioversion','Amiodarone 150mg over 10 min'],ans:2,
+rationale:'Hemodynamic instability (hypotension + AMS) = synchronized cardioversion FIRST, regardless of rhythm identity. Do not delay cardioversion for drug therapy. If rhythm is AF: start at 120-200J biphasic. Always synchronize to avoid R-on-T and VF induction.',
+links:[{t:'ACLS Tachycardia Algorithm',u:'https://www.acls.net/tachycardia-algorithm.htm'},{t:'AHA Synchronized Cardioversion',u:'https://cpr.heart.org'}]},
+
+{id:'C05',cat:'C',q:'Torsades de Pointes is associated with prolonged:',
+opts:['PR interval','QRS complex','QT interval','ST segment'],ans:2,
+rationale:'TdP is polymorphic VT triggered by early afterdepolarizations on a prolonged QT (>500ms). Causes: hypomagnesemia, hypokalemia, drugs (antiarrhythmics, antipsychotics, macrolides). Treatment: Magnesium sulfate 2g IV over 5-10 min. Unstable → defibrillate.',
+links:[{t:'Torsades de Pointes (Life in the Fast Lane)',u:'https://litfl.com/polymorphic-vt-and-torsades-de-pointes-ecg/'},{t:'StatPearls: Torsades de Pointes',u:'https://www.ncbi.nlm.nih.gov/books/NBK459182/'}]},
+
+{id:'C06',cat:'C',q:'Dialysis patient presents in wide-complex PEA arrest. ECG shows peaked T-waves prior to arrest. First drug to give?',
+opts:['Epinephrine 1mg','Sodium bicarbonate 1 mEq/kg','Calcium chloride 1g','Amiodarone 300mg'],ans:2,
+rationale:'Hyperkalemia (peaked T-waves, widening QRS, sine wave → arrest) in dialysis patients → Calcium chloride 1g IV stabilizes cardiac membrane FIRST. Calcium does not lower potassium — it raises the threshold for cardiac membrane depolarization. Follow with bicarb, insulin/dextrose, and sodium bicarb for potassium shifting.',
+links:[{t:'Hyperkalemia Management in EMS',u:'https://emcrit.org/ibcc/hyperkalemia/'},{t:'ACLS for Electrolyte Disorders',u:'https://www.acls.net'}]},
+
+{id:'C07',cat:'C',q:'Delta wave + short PR interval on 12-lead. Which drug is CONTRAINDICATED?',
+opts:['Amiodarone','Adenosine and all AV nodal blockers','Aspirin','Lidocaine'],ans:1,
+rationale:'Wolff-Parkinson-White (WPW): delta wave + short PR = pre-excitation via accessory pathway (Bundle of Kent). AV nodal blockers (adenosine, diltiazem, verapamil, beta-blockers) block the AV node, forcing conduction down the accessory pathway → extremely rapid rates → VF. Treat with procainamide or cardioversion.',
+links:[{t:'WPW recognition and management',u:'https://litfl.com/pre-excitation-syndromes-ecg-library/'},{t:'WPW in EMS (EMCrit)',u:'https://emcrit.org'}]},
+
+{id:'C08',cat:'C',q:'Symptomatic bradycardia at 34/min with hypotension. Two doses of atropine have failed. Next?',
+opts:['Amiodarone 150mg IV','Transcutaneous pacing (TCP)','Magnesium 2g IV','Adenosine 6mg'],ans:1,
+rationale:'TCP is the next step for atropine-refractory symptomatic bradycardia. Start at 50-80 mA, increase until capture (pacer spike followed by wide QRS + T-wave). Sedate/analgize the patient (ketamine or midazolam + fentanyl). Dopamine or epinephrine infusion is alternative if TCP unavailable.',
+links:[{t:'Bradycardia Algorithm ACLS',u:'https://www.acls.net/bradycardia-algorithm.htm'},{t:'TCP in EMS',u:'https://www.naemsp.org'}]},
+
+{id:'C09',cat:'C',q:'Witnessed VF arrest. You have a defibrillator immediately available. First action?',
+opts:['CPR 2 minutes first','Epinephrine 1mg','Defibrillate immediately','Establish IV access'],ans:2,
+rationale:'Witnessed VF: SHOCK IMMEDIATELY. Every minute without defibrillation decreases survival 7-10%. For unwitnessed arrest or unknown down-time >4 minutes, a brief period of CPR before shocking may be considered. AED/defibrillator on a witnessed arrest → shock first.',
+links:[{t:'AHA Chain of Survival',u:'https://cpr.heart.org'},{t:'Early Defibrillation Evidence',u:'https://pubmed.ncbi.nlm.nih.gov'}]},
+
+// ── TRAUMA ──
+{id:'T01',cat:'T',q:'Blunt chest trauma: absent left breath sounds, JVD, tracheal deviation to the RIGHT, BP 68/40. Immediate treatment?',
+opts:['Two large-bore IVs and 2L NS bolus','Needle decompression — left 2nd ICS MCL','Pericardiocentesis','Bilateral chest tubes'],ans:1,
+rationale:'Tension pneumothorax: absent breath sounds + JVD + tracheal deviation AWAY from injury + obstructive shock. Trachea deviates AWAY from the tension side. Needle decompression at 2nd ICS MCL (or 4th/5th ICS anterior axillary line). Do not wait for CXR.',
+links:[{t:'Tension Pneumothorax (ATLS)',u:'https://www.facs.org'},{t:'Needle Decompression Technique',u:'https://www.jems.com'},{t:'Prehospital Thoracic Trauma',u:'https://www.ncbi.nlm.nih.gov'}]},
+
+{id:'T02',cat:'T',q:'Permissive hypotension in hemorrhagic shock (no TBI) targets systolic BP of:',
+opts:['60-70 mmHg','80-90 mmHg','100-110 mmHg','Normal — full resuscitation'],ans:1,
+rationale:'Hypotensive resuscitation targets SBP 80-90 mmHg in penetrating trauma without TBI. Higher pressures dilute clotting factors and dislodge nascent clots. EXCEPTION: With TBI, maintain SBP ≥90 (or MAP ≥80) to preserve cerebral perfusion pressure. 1:1:1 blood products when available.',
+links:[{t:'TCCC Guidelines',u:'https://www.jsomonline.org'},{t:'Damage Control Resuscitation',u:'https://www.ncbi.nlm.nih.gov/pmc/articles/PMC4730397/'},{t:'Permissive Hypotension Evidence',u:'https://pubmed.ncbi.nlm.nih.gov'}]},
+
+{id:'T03',cat:'T',q:'In START triage: breathing patient with RR 32/min and cap refill 3 seconds. Tag?',
+opts:['Black','Green','Yellow','Red (Immediate)'],ans:3,
+rationale:'START triage — RED criteria: any ONE of: RR >30/min, capillary refill >2 seconds, or unable to follow simple commands. This patient meets TWO red criteria. RED = immediate life-threatening, treat first. GREEN = ambulatory/minor. YELLOW = delayed. BLACK = expectant/dead.',
+links:[{t:'START Triage System',u:'https://www.remm.nlm.gov/startadult.htm'},{t:'SALT Triage (updated)',u:'https://www.cdc.gov'},{t:'MCI Triage in EMS',u:'https://www.jems.com'}]},
+
+{id:'T04',cat:'T',q:'Penetrating abdominal trauma with bowel evisceration. Correct management?',
+opts:['Gently replace organs, apply pressure dressing','Cover with moist sterile saline dressing — do NOT replace organs','Leave exposed for surgical team','Apply occlusive dressing with petroleum gauze'],ans:1,
+rationale:'Evisceration management: cover with moist sterile saline gauze or wet sterile dressing. Do NOT attempt to replace bowel (increases contamination, can cause ischemia). Do NOT apply direct pressure over organs. Protect from drying and temperature loss. Rapid transport.',
+links:[{t:'Abdominal Trauma Management (ATLS)',u:'https://www.facs.org'},{t:'Evisceration Prehospital Care',u:'https://www.ncbi.nlm.nih.gov'}]},
+
+{id:'T05',cat:'T',q:'Tourniquet applied for arterial lower leg bleeding. Bleeding continues through tourniquet. Next step?',
+opts:['Remove tourniquet — apply wound packing only','Apply second tourniquet proximal to first','Loosen first tourniquet to allow perfusion','Apply direct pressure over tourniquet'],ans:1,
+rationale:'One tourniquet fails → apply second tourniquet 2-3cm proximal to the first. Do NOT remove or loosen the first (can worsen bleeding and dislodge clot). Note time of each application on patient\'s forehead/tourniquet tag. Hemostatic gauze (wound packing) for junctional wounds where tourniquet cannot be placed.',
+links:[{t:'TCCC Tourniquet Guidelines',u:'https://www.jsomonline.org'},{t:'Tourniquet evidence in civilian EMS',u:'https://pubmed.ncbi.nlm.nih.gov'},{t:'Hemorrhage control (Stop the Bleed)',u:'https://www.stopthebleed.org'}]},
+
+{id:'T06',cat:'T',q:'Beck\'s Triad (hypotension, JVD, muffled heart sounds) indicates:',
+opts:['Tension pneumothorax','Cardiac tamponade','Massive hemothorax','Pulmonary embolism'],ans:1,
+rationale:'Beck\'s Triad = cardiac tamponade. Fluid accumulation in the pericardial sac compresses the heart → obstructive shock. Differentiate from tension PTX: tamponade has muffled heart sounds, trachea midline. Field treatment: rapid transport. Hospital: pericardiocentesis or ED thoracotomy.',
+links:[{t:'Cardiac Tamponade recognition',u:'https://litfl.com/cardiac-tamponade/'},{t:'Penetrating Cardiac Trauma',u:'https://www.trauma.org'}]},
+
+{id:'T07',cat:'T',q:'Spinal immobilization is indicated in which patient?',
+opts:['All trauma patients per protocol','Alert patient: neck pain, midline tenderness, significant mechanism','Unconscious patient with minor household fall','All motor vehicle accidents regardless of complaint'],ans:1,
+rationale:'Current evidence-based guidelines (NEXUS, Canadian C-Spine) support selective immobilization. Indications: midline tenderness + distracting injury, neurological deficits, altered LOC, high-risk mechanism. Routine immobilization of all trauma patients is no longer supported — it can worsen outcomes (airway compromise, increased ICP, pressure injuries).',
+links:[{t:'EMS Spinal Precautions (NAEMSP)',u:'https://www.naemsp.org'},{t:'NEXUS Criteria',u:'https://www.ncbi.nlm.nih.gov/pmc/articles/PMC1831528/'},{t:'Canadian C-Spine Rule',u:'https://pubmed.ncbi.nlm.nih.gov/11597285/'}]},
+
+// ── MEDICAL ──
+{id:'M01',cat:'M',q:'Confusion, fever 40°C, agitation, diaphoresis, clonus, shortly after starting SSRI + tramadol. Diagnosis?',
+opts:['Neuroleptic Malignant Syndrome (NMS)','Serotonin Syndrome','Anticholinergic toxidrome','Malignant Hyperthermia'],ans:1,
+rationale:'Serotonin Syndrome triad: altered mental status + autonomic instability + neuromuscular abnormalities (clonus, hyperreflexia, tremor). Onset RAPID (minutes to hours). Precipitated by serotonergic drugs (SSRIs, SNRIs, tramadol, fentanyl, linezolid). NMS develops over days from antipsychotics and shows bradyreflexia, "lead pipe" rigidity.',
+links:[{t:'Serotonin Syndrome (StatPearls)',u:'https://www.ncbi.nlm.nih.gov/books/NBK482377/'},{t:'Toxidrome comparison chart',u:'https://www.poison.org'},{t:'Serotonin Syndrome vs NMS',u:'https://litfl.com/serotonin-toxicity/'}]},
+
+{id:'M02',cat:'M',q:'Diabetic patient unresponsive, glucose 24 mg/dL. No IV access. You administer:',
+opts:['Oral glucose gel sublingually','Glucagon 1mg IM','Dextrose 10% subcutaneous','50% Dextrose intraosseously'],ans:1,
+rationale:'Glucagon 1mg IM when IV/IO unavailable for severe hypoglycemia. Glucagon mobilizes hepatic glycogen → raises glucose within 10-20 min. Requires intact glycogen stores (may fail in alcoholics, malnutrition, prolonged fasting). If IO can be established rapidly, D10 or D50 IV/IO is preferred.',
+links:[{t:'Hypoglycemia Management EMS',u:'https://www.naemsp.org'},{t:'Glucagon in EMS (FDA)',u:'https://www.fda.gov'},{t:'StatPearls: Hypoglycemia',u:'https://www.ncbi.nlm.nih.gov/books/NBK534841/'}]},
+
+{id:'M03',cat:'M',q:'COPD patient: SpO₂ 80%, severe dyspnea, altered mentation. Correct oxygen approach?',
+opts:['Withhold oxygen — risk of suppressing hypoxic drive','Titrate to SpO₂ 88-92%','100% NRB immediately','CPAP at 15 cmH₂O'],ans:1,
+rationale:'Target SpO₂ 88-92% in COPD. Hyperoxia causes V/Q mismatch (Haldane effect) and absorptive atelectasis. The "hypoxic drive" myth is overstated — these patients will NOT stop breathing from supplemental O₂ — but hyperoxia still worsens hypercapnia via Haldane. With severe distress, CPAP 5-8 cmH₂O is often appropriate alongside titrated O₂.',
+links:[{t:'GOLD COPD Guidelines',u:'https://goldcopd.org'},{t:'Hyperoxia in COPD evidence',u:'https://www.ncbi.nlm.nih.gov/pmc/articles/PMC2899815/'},{t:'CPAP in COPD exacerbation',u:'https://pubmed.ncbi.nlm.nih.gov'}]},
+
+{id:'M04',cat:'M',q:'Cincinnati Prehospital Stroke Scale includes which three assessments?',
+opts:['LOC, grip strength, visual fields','Facial droop, arm drift, speech abnormality','Headache severity, ataxia, vision changes','Pupil reactivity, LOC, pronator drift'],ans:1,
+rationale:'CPSS: Facial droop (asymmetry with smile) + Arm drift (eyes closed, 10 seconds) + Speech (slurred, wrong words, none). Any ONE abnormal finding = 72% stroke probability. Also know: BE-FAST (Balance, Eyes, Face, Arms, Speech, Time to call). Last known well time is critical for tPA eligibility.',
+links:[{t:'Cincinnati Stroke Scale validation',u:'https://pubmed.ncbi.nlm.nih.gov/10069918/'},{t:'Stroke recognition in EMS',u:'https://www.stroke.org'},{t:'AHA Prehospital Stroke Guidelines',u:'https://www.ahajournals.org'}]},
+
+{id:'M05',cat:'M',q:'Acute pulmonary edema, BP 200/120, severe dyspnea, pink frothy sputum. First medication?',
+opts:['Furosemide 40mg IV','Nitroglycerin 0.4mg SL (repeat q5min)','Morphine 4mg IV','Dopamine 5 mcg/kg/min'],ans:1,
+rationale:'Acute cardiogenic pulmonary edema with hypertension → Nitroglycerin first (reduces preload AND afterload within minutes). Furosemide is beneficial but slower (30-60 min). Morphine is NO LONGER recommended (associated with increased mortality in ADHF). CPAP significantly reduces intubation rates. Avoid nitro with RV MI or SBP <90.',
+links:[{t:'Acute Decompensated Heart Failure EMS',u:'https://www.naemsp.org'},{t:'ADHF JACC Guidelines',u:'https://www.jacc.org'},{t:'Morphine in ADHF evidence',u:'https://pubmed.ncbi.nlm.nih.gov/18752940/'}]},
+
+{id:'M06',cat:'M',q:'Diabetic patient: Kussmaul respirations, glucose 520 mg/dL, fruity breath. Diagnosis?',
+opts:['Hyperosmolar Hyperglycemic State (HHS)','Diabetic Ketoacidosis (DKA)','Hypoglycemic encephalopathy','Thyroid storm'],ans:1,
+rationale:'DKA: glucose 250-600+, ANION GAP metabolic acidosis, KETONEMIA, Kussmaul respirations (compensatory hyperventilation to blow off CO₂). Primarily Type 1 DM. HHS: glucose >600 (often 900-1200), minimal ketones, severe hyperosmolarity, more common in T2DM. Both require IV fluids and hospital electrolyte management.',
+links:[{t:'DKA vs HHS comparison',u:'https://www.ncbi.nlm.nih.gov/books/NBK560723/'},{t:'ADA DKA Standards',u:'https://diabetes.org'},{t:'DKA Prehospital Recognition',u:'https://www.jems.com'}]},
+
+{id:'M07',cat:'M',q:'Pinpoint pupils, respiratory rate 5/min, unconscious. First treatment?',
+opts:['Flumazenil 0.2mg IV','Naloxone 0.4-2mg IV/IM/IN','D50W 25g IV','Thiamine 100mg IV first'],ans:1,
+rationale:'Classic opioid toxidrome: pinpoint (miosis) + respiratory depression + decreased LOC. Naloxone 0.4-2mg (titrate to adequate respiration, not full awakening — avoids acute withdrawal and combativeness). IN route (2mg/0.1mL) is rapid in field settings. Fentanyl analogues may require higher doses (up to 10mg). Duration of naloxone < many opioids — monitor for re-sedation.',
+links:[{t:'Naloxone dosing in opioid crisis',u:'https://www.cdc.gov/opioids'},{t:'Opioid toxidrome recognition',u:'https://www.poison.org'},{t:'EMCrit: Opioid OD management',u:'https://emcrit.org'}]},
+
+{id:'M08',cat:'M',q:'Patient presents with fever, stiff neck, photophobia, and purpuric (non-blanching) rash. Priority concern?',
+opts:['Subarachnoid hemorrhage','Viral meningitis','Meningococcal septicemia','Rocky Mountain Spotted Fever'],ans:2,
+rationale:'Non-blanching purpuric/petechial rash + meningismus = meningococcal septicemia until proven otherwise. Mortality 20-50% without treatment. Field: IV access, fluid resuscitation for shock, RAPID transport. Antibiotic delay is acceptable prehospital but hospital team must be notified immediately. Glass test: rash does NOT blanch under pressure = hemorrhagic.',
+links:[{t:'Meningococcal disease recognition',u:'https://www.cdc.gov/meningococcal'},{t:'Meningitis EMS management',u:'https://www.ncbi.nlm.nih.gov'},{t:'Non-blanching rash identification',u:'https://www.aafp.org'}]},
+
+// ── OPERATIONS ──
+{id:'O01',cat:'O',q:'START triage. Ambulatory patient follows commands to walk to designated area. Tag?',
+opts:['Red','Yellow','Green','Black'],ans:2,
+rationale:'In START triage, the FIRST step is directing walking wounded (ambulatory, following commands) to a designated area → GREEN (minor). These patients are not assessed further in initial triage pass. Resource: next triage walking wounded area. Rescuers then move to non-ambulatory patients.',
+links:[{t:'START Triage Reference',u:'https://www.remm.nlm.gov/startadult.htm'},{t:'MCI Operations EMS',u:'https://www.fema.gov'},{t:'SALT Triage Alternative',u:'https://www.cdc.gov'}]},
+
+{id:'O02',cat:'O',q:'Optimal ICS span of control (supervisors to subordinates)?',
+opts:['1-3','3-7','8-12','15-20'],ans:1,
+rationale:'ICS optimal span of control is 1:5 (range 3-7). Exceeding 7 leads to supervisory overload and communication breakdown. Below 3 is inefficient. In rapidly evolving MCI: expand sections, add personnel, maintain span of control through Division/Group supervisors.',
+links:[{t:'FEMA ICS 100 Resource',u:'https://training.fema.gov/is/courseoverview.aspx?code=IS-100.c'},{t:'NIMS ICS Principles',u:'https://www.fema.gov/nims'}]},
+
+{id:'O03',cat:'O',q:'On scene you suspect an active clandestine meth lab. Hazmat not yet available. You should:',
+opts:['Enter with partner to rescue victims','Establish perimeter uphill/upwind — do not enter','Don level B PPE from ambulance','Ventilate scene by opening windows and doors'],ans:1,
+rationale:'Clandestine drug labs: NEVER enter without hazmat team and appropriate PPE (Level B minimum). EMS standard PPE provides NO protection from phosphine, hydriodic acid, or other chemical byproducts. Establish cold zone uphill and upwind, deny entry, call hazmat. Any victims in hot zone are inaccessible until scene is cleared.',
+links:[{t:'DEA Clandestine Lab Safety',u:'https://www.dea.gov'},{t:'Hazmat Operations in EMS',u:'https://www.naemsp.org'},{t:'NFPA 704 Hazard Identification',u:'https://www.nfpa.org'}]},
+
+{id:'O04',cat:'O',q:'You receive an order from medical direction you believe could harm the patient. You should:',
+opts:['Follow the order — medical director assumes all liability','Clearly state your concern and request confirmation, then follow if re-confirmed','Refuse the order and contact supervisor','Administer a safer alternative and document your rationale'],ans:1,
+rationale:'Patient advocacy requires questioning orders you believe are harmful: state your concern clearly and professionally. If the physician re-confirms after your concern is noted — follow the order (they have information you may not). Document everything meticulously. You cannot unilaterally refuse a confirmed order without abandonment liability, but you cannot silently follow a clearly dangerous one.',
+links:[{t:'EMS Medical Direction and Liability',u:'https://www.naemsp.org'},{t:'NREMT Scope of Practice',u:'https://www.nremt.org'}]},
+
+{id:'O05',cat:'O',q:'A crew member shows acute stress signs after a traumatic pediatric call. Best immediate action?',
+opts:['Remove from service; mandatory CISD within 72 hours','Allow peer support conversation, monitor, offer voluntary resources','Document and continue shift without intervention','Mandatory psychological evaluation before next shift'],ans:1,
+rationale:'Mandatory CISD (Critical Incident Stress Debriefing) is NO LONGER evidence-based — it can increase PTSD by forcing premature processing. Current best practice: voluntary peer support, psychological first aid, normalization of stress response, and access to voluntary mental health resources. Monitor for ongoing symptoms. The IAFF and NAEMSP both support peer support programs over mandated debriefing.',
+links:[{t:'EMS Behavioral Health (NAEMSP)',u:'https://www.naemsp.org'},{t:'First Responder Mental Health',u:'https://www.firstrespondersupport.org'},{t:'CISD Evidence Review',u:'https://pubmed.ncbi.nlm.nih.gov/12043843/'}]}
+];
+
+const DRUGS=[
+{name:'Epinephrine 1:10,000',cls:'Vasopressor / Cardiac Stimulant',cat:'cardiac',
+dose:'Cardiac arrest: 1mg (10mL of 1:10,000) IV/IO q3-5 min',onset:'1-2 min IV',
+ind:'Pulseless arrest (VF, VT, PEA, asystole); anaphylaxis (1:1,000 IM)',
+contra:'No absolute contraindications in cardiac arrest',
+warn:'High-dose epi NOT recommended in routine arrest; causes post-ROSC hypertension',
+mech:'Alpha-1 vasoconstriction increases coronary perfusion pressure; Beta-1 increases myocardial contractility'},
+{name:'Amiodarone',cls:'Class III Antiarrhythmic',cat:'cardiac',
+dose:'VF/pVT: 300mg IV/IO bolus; repeat 150mg x1. A-Fib rate control: 150mg over 10 min',onset:'Minutes IV',
+ind:'Refractory VF/VT (after 2nd shock), stable V-Tach, A-Fib rate control',
+contra:'Cardiogenic shock, severe sinus node dysfunction, 2nd/3rd degree AV block without pacemaker',
+warn:'Hypotension with rapid infusion; long half-life (40-55 days); multiple drug interactions',
+mech:'Blocks sodium, potassium, and calcium channels; also beta-blocking effect'},
+{name:'Adenosine',cls:'Antiarrhythmic — AV Node Blocker',cat:'cardiac',
+dose:'6mg rapid IVP (1-3 sec) → flush. Repeat 12mg x2 if needed. Use 3mg for central line.',onset:'Seconds',
+ind:'Stable SVT (narrow complex, regular)',
+contra:'WPW/pre-excitation, 2nd/3rd degree AV block, sick sinus syndrome, asthma (relative)',
+warn:'Must be given as rapid IVP followed by immediate 20mL flush. Causes transient asystole — warn patient',
+mech:'Slows conduction through AV node; terminates re-entrant SVT'},
+{name:'Atropine',cls:'Anticholinergic / Vagolytic',cat:'cardiac',
+dose:'Bradycardia: 0.5mg IV q3-5 min (max 3mg). Organophosphate: 2-4mg IV q5-10 min until secretions dry',onset:'1-2 min IV',
+ind:'Symptomatic bradycardia; organophosphate poisoning (SLUDGE)',
+contra:'Tachycardia; glaucoma (relative)',
+warn:'Doses <0.5mg may cause paradoxical bradycardia; ineffective in Type II and complete heart block',
+mech:'Blocks muscarinic acetylcholine receptors → increases SA node automaticity and AV conduction'},
+{name:'Calcium Chloride 10%',cls:'Electrolyte',cat:'cardiac',
+dose:'Hyperkalemia: 1g (10mL) IV over 5-10 min. Calcium channel blocker OD: 1-2g IV',onset:'1-3 min',
+ind:'Hyperkalemia (cardiac membrane stabilization), calcium channel blocker OD, hypocalcemia, magnesium toxicity',
+contra:'Digitalis toxicity (may worsen), hypercalcemia',
+warn:'CaCl provides 3x more elemental calcium than calcium gluconate; vesicant — avoid extravasation; do not mix with sodium bicarb (precipitates)',
+mech:'Raises threshold for cardiac membrane depolarization — stabilizes against hyperkalemia-induced dysrhythmias'},
+{name:'Dopamine',cls:'Vasopressor / Inotrope',cat:'cardiac',
+dose:'2-20 mcg/kg/min IV infusion (titrate to effect). Low: 2-5 (renal), Mid: 5-10 (inotrope), High: 10-20 (vasopressor)',onset:'5 min',
+ind:'Cardiogenic shock, symptomatic bradycardia (atropine-refractory), distributive shock',
+contra:'VF, pheochromocytoma, uncorrected hypovolemia',
+warn:'Tachycardia at higher doses; extravasation causes tissue necrosis; arrhythmogenic',
+mech:'Dose-dependent: low=D1 (renal vasodilation); mid=Beta-1 (inotropy); high=Alpha-1 (vasoconstriction)'},
+{name:'Nitroglycerin',cls:'Nitrate / Vasodilator',cat:'cardiac',
+dose:'SL: 0.4mg q5min x3. IV infusion: 10-200 mcg/min (for severe HTN/pulm edema)',onset:'1-3 min SL',
+ind:'ACS (angina/STEMI without RV involvement), acute pulmonary edema, hypertensive emergency',
+contra:'SBP <90, RV MI, recent PDE-5 inhibitor use (sildenafil, tadalafil — 24-48h), severe aortic stenosis',
+warn:'Can cause severe hypotension especially with RV MI or volume depletion; headache common; reflex tachycardia',
+mech:'Converts to nitric oxide → smooth muscle relaxation → venodilation (primarily preload) and arteriodilation'},
+{name:'Magnesium Sulfate',cls:'Electrolyte / Antiarrhythmic',cat:'cardiac',
+dose:'Torsades: 2g IV over 5-10 min. Eclampsia: 4-6g over 20 min loading dose. Severe asthma: 2g over 20 min',onset:'Minutes IV',
+ind:'Torsades de Pointes, eclampsia/pre-eclampsia, severe bronchospasm (refractory asthma), hypomagnesemia',
+contra:'Hypermagnesemia, heart block, renal failure (relative)',
+warn:'Toxicity: loss of DTRs → respiratory arrest → cardiac arrest. Antidote: calcium gluconate',
+mech:'Inhibits calcium-mediated smooth muscle contraction; stabilizes cardiac membrane; bronchodilates'},
+{name:'Succinylcholine',cls:'Depolarizing Neuromuscular Blocker (NMB)',cat:'airway',
+dose:'RSI: 1.5-2 mg/kg IV or 4 mg/kg IM. Pediatric: 2 mg/kg',onset:'45-60 sec IV',
+ind:'RSI (rapid sequence intubation); laryngospasm',
+contra:'Burns/crush injury >24-72h, denervation injuries, malignant hyperthermia history, penetrating eye injuries, rhabdomyolysis, known hyperkalemia, pseudocholinesterase deficiency',
+warn:'Causes fasciculations; raises potassium ~0.5-1.0 mEq/L (normal); masseter spasm = malignant hyperthermia trigger; extremely SHORT duration (4-6 min)',
+mech:'Depolarizes motor endplate — sustained depolarization prevents repolarization (paralysis)'},
+{name:'Rocuronium',cls:'Non-Depolarizing NMB',cat:'airway',
+dose:'RSI: 1.2 mg/kg IV (high-dose). Standard paralysis: 0.6 mg/kg',onset:'60-90 sec (at 1.2 mg/kg)',
+ind:'RSI when succinylcholine contraindicated; ongoing paralysis post-intubation',
+contra:'Rocuronium allergy (rare)',
+warn:'Duration 60-90 min at RSI dose — NO "rescue" if cannot intubate without sugammadex. Must have sugammadex (16 mg/kg) available',
+mech:'Competitively blocks nicotinic ACh receptors at neuromuscular junction'},
+{name:'Ketamine',cls:'Dissociative Anesthetic',cat:'airway',
+dose:'RSI induction: 1.5-2 mg/kg IV / 4-6 mg/kg IM. Analgesia: 0.1-0.3 mg/kg IV. Excited delirium: 4-6 mg/kg IM',onset:'30-60 sec IV / 3-5 min IM',
+ind:'RSI induction, procedural sedation, refractory pain, excited delirium, severe bronchospasm',
+contra:'Hypertensive emergency (relative), active psychosis (relative), increased ICP (traditionally — newer evidence less clear)',
+warn:'Emergence phenomena; increases oral secretions (pretreat with atropine in some protocols); laryngospasm rare but possible',
+mech:'NMDA receptor antagonist → dissociative state; maintains airway reflexes and respiratory drive (usually)'},
+{name:'Midazolam',cls:'Benzodiazepine',cat:'neuro',
+dose:'Seizures: 0.1 mg/kg IV/IO (max 10mg) or 0.2 mg/kg IM/IN. RSI sedation: 0.1-0.3 mg/kg IV',onset:'2-5 min IV / 5-10 min IM',
+ind:'Status epilepticus, procedural sedation, RSI pre-medication, agitation',
+contra:'Acute narrow angle glaucoma, respiratory depression without resuscitation available',
+warn:'Respiratory depression (especially with opioids); hypotension; paradoxical agitation in elderly',
+mech:'Enhances GABA-A receptor activity → CNS depression, anticonvulsant, amnestic'},
+{name:'Naloxone (Narcan)',cls:'Opioid Antagonist',cat:'neuro',
+dose:'Respiratory depression: 0.4-2mg IV/IM/IN (titrate to respirations, not full reversal). Repeat q2-3 min. IN: 4mg/0.1mL',onset:'1-2 min IV / 3-5 min IN-IM',
+ind:'Opioid overdose (respiratory depression, pinpoint pupils, altered LOC)',
+contra:'None absolute in acute OD setting',
+warn:'Duration shorter than most opioids → re-sedation. Precipitates acute withdrawal in dependent patients — titrate carefully. Higher doses needed for synthetic opioids (fentanyl analogues)',
+mech:'Competitive antagonist at all opioid receptors (mu, kappa, delta)'},
+{name:'Dextrose 50% (D50)',cls:'Carbohydrate / Glucose Solution',cat:'metabolic',
+dose:'Adults: 25g (50mL of D50) IV/IO slow push. Pediatric: use D10 (5 mL/kg) to avoid hyperosmolarity',onset:'1-3 min',
+ind:'Symptomatic hypoglycemia (glucose <60 with symptoms) when IV/IO access established',
+contra:'None absolute in hypoglycemia; avoid D50 in pediatrics',
+warn:'Confirm hypoglycemia BEFORE administering. Thiamine FIRST in malnourished/alcoholic patients (Wernicke\'s risk). Painful if extravasated (hyperosmolar). Use D10 in peds.',
+mech:'Direct glucose replacement — immediately raises blood glucose'},
+{name:'Glucagon',cls:'Pancreatic Hormone',cat:'metabolic',
+dose:'Hypoglycemia (no IV): 1mg IM. Beta-blocker OD: 3-10mg IV bolus then 3-5 mg/hr infusion',onset:'10-20 min IM (hypoglycemia)',
+ind:'Severe hypoglycemia without IV access; beta-blocker/calcium channel blocker overdose',
+contra:'Pheochromocytoma, insulinoma',
+warn:'Ineffective with depleted glycogen stores (alcoholics, prolonged fasting, hepatic disease). Causes nausea/vomiting. Has short duration; get IV access and give dextrose when possible',
+mech:'Stimulates glycogenolysis and gluconeogenesis in liver; positive inotrope via cAMP (for OD)'},
+{name:'Furosemide (Lasix)',cls:'Loop Diuretic',cat:'metabolic',
+dose:'0.5-1 mg/kg IV (usual 40-80mg). Onset of diuresis: 30-60 min IV',onset:'5-15 min (venodilation); 30-60 min (diuresis)',
+ind:'Acute pulmonary edema (CHF exacerbation), hypertensive emergency with fluid overload',
+contra:'Anuria, sulfa allergy (cross-reactivity rare)',
+warn:'NOT first-line in acute pulmonary edema — nitroglycerin and CPAP act faster. May worsen hypovolemia. Monitor electrolytes (hypokalemia, hypomagnesemia)',
+mech:'Inhibits Na-K-2Cl cotransporter in loop of Henle → natriuresis/diuresis; also acute venodilation'},
+{name:'Sodium Bicarbonate',cls:'Alkalinizing Agent',cat:'metabolic',
+dose:'Cardiac arrest: 1 mEq/kg IV/IO. TCA OD: 1-2 mEq/kg bolus → titrate to pH 7.45-7.55. Hyperkalemia: 1 mEq/kg',onset:'Immediate',
+ind:'TCA overdose (QRS widening), severe hyperkalemia, prolonged cardiac arrest with documented acidosis, sodium channel blocker OD',
+contra:'Metabolic/respiratory alkalosis; routine use in cardiac arrest without specific indication (worsens intracellular acidosis)',
+warn:'Do not mix with calcium (precipitates). Causes hypernatremia and hyperosmolarity with excessive use. CO₂ generated can worsen ventilation',
+mech:'Directly increases serum pH; in TCA OD: alkalinization dissociates drug from sodium channels'},
+{name:'Fentanyl',cls:'Opioid Analgesic',cat:'neuro',
+dose:'Pain: 1-2 mcg/kg IV/IO/IN slow push. IM: 1-2 mcg/kg. IN: 1.5-2 mcg/kg (max 200 mcg per nare)',onset:'1-2 min IV / 5-8 min IN',
+ind:'Moderate to severe pain, RSI pre-medication (blunt sympathetic response), procedural sedation adjunct',
+contra:'Respiratory depression without resuscitation available',
+warn:'Chest wall rigidity at high IV doses (wooden chest — treat with NMB or naloxone). Accumulates in fat. Extremely potent analogues (carfentanil) require massive naloxone doses',
+mech:'Mu-opioid receptor agonist — analgesia, sedation, respiratory depression'},
+{name:'Albuterol (Salbutamol)',cls:'Beta-2 Agonist / Bronchodilator',cat:'airway',
+dose:'Nebulizer: 2.5mg in 3mL NS (may repeat or give continuous). MDI: 4-8 puffs',onset:'5-15 min inhaled',
+ind:'Bronchospasm (asthma, COPD exacerbation, anaphylaxis with bronchospasm)',
+contra:'Hypersensitivity (rare)',
+warn:'Tachycardia and tremor common; hypokalemia with high doses; may worsen hypoxemia initially (V/Q mismatch); SVT possible',
+mech:'Selective beta-2 agonist → bronchial smooth muscle relaxation; also slightly bronchial mucus clearance'},
+{name:'Epinephrine 1:1,000 (IM)',cls:'Vasopressor / Bronchodilator',cat:'other',
+dose:'Anaphylaxis: 0.3-0.5mg (0.3-0.5mL of 1:1,000) IM in lateral thigh (vastus lateralis). Peds: 0.01 mg/kg max 0.5mg',onset:'5-8 min IM',
+ind:'Anaphylaxis (first-line), severe bronchospasm',
+contra:'No absolute contraindications in anaphylaxis',
+warn:'IM lateral thigh preferred over deltoid (faster absorption, higher peak). IV 1:1,000 is a medication error — IV dose is 1:10,000 for cardiac indication. Second dose at 5-15 min if no response',
+mech:'Alpha-1 (vasoconstriction, reduces urticaria/angioedema); Beta-2 (bronchodilation); Beta-1 (increases cardiac output)'}
+];
+
+const RHYTHMS=[
+{name:'Ventricular Fibrillation (VF)',
+strip:'P waves: absent | QRS: chaotic, no organized complex | Rate: 150-500 (unmeasurable)\nRhythm: completely irregular, random fibrillatory waves\nAmplitude: coarse (>3mm) or fine (<3mm) — coarse = more likely to convert',
+vitals:{Rate:'Unmeasurable',Rhythm:'Chaotic',PWaves:'Absent',QRS:'Absent/Chaotic',PR:'None'},
+key:'Coarse VF more likely to convert than fine VF. Fine VF may be confused with asystole — change lead. Caused by: ischemia, electrolyte abnormalities, hypothermia, drug toxicity.',
+tx:'DEFIBRILLATE IMMEDIATELY (200J biphasic). CPR 2 min → reassess. Epinephrine 1mg q3-5 min after 2nd shock. Amiodarone 300mg after 2nd or 3rd shock. Treat reversible causes (5H/5T).'},
+{name:'Pulseless Ventricular Tachycardia (pVT)',
+strip:'P waves: absent (may be buried) | QRS: wide (>0.12s), monomorphic, rapid\nRate: 150-250 bpm | Rhythm: regular\nQRS morphology: consistent shape — "monomorphic"',
+vitals:{Rate:'150-250',Rhythm:'Regular',PWaves:'Absent',QRS:'>0.12s wide',PR:'None'},
+key:'pVT is treated identically to VF (defibrillation). Monomorphic vs polymorphic distinction matters for STABLE VT. AV dissociation, fusion beats, and capture beats confirm VT vs SVT with aberrancy.',
+tx:'Same as VF: DEFIBRILLATE. CPR → Epinephrine → Amiodarone. Stable monomorphic VT with pulse: amiodarone 150mg over 10 min or cardioversion.'},
+{name:'Torsades de Pointes (TdP)',
+strip:'P waves: absent | QRS: wide, POLYMORPHIC — twisting axis, alternating amplitude\nRate: 150-250 bpm | Looks like VT that "twists around the baseline"\nQT interval (sinus rhythm): prolonged >500ms',
+vitals:{Rate:'150-250',Rhythm:'Irregular polymorphic',PWaves:'Absent',QRS:'Wide polymorphic',PR:'None'},
+key:'Preceded by prolonged QT. Causes: hypomagnesemia, hypokalemia, antiarrhythmics (amiodarone, sotalol), antipsychotics, macrolide antibiotics, tricyclics. The "twisting" of QRS polarity around baseline is diagnostic.',
+tx:'Unstable/pulseless: DEFIBRILLATE. Stable TdP: Magnesium sulfate 2g IV over 5-10 min. Correct underlying QT-prolonging cause. NEVER give antiarrhythmics (worsen QT).'},
+{name:'Complete (3rd Degree) AV Block',
+strip:'P waves: present, regular rate ~60-100 | QRS: present but INDEPENDENTLY regular, rate 20-60\nP-R relationship: NONE — P waves and QRS completely dissociated\nQRS: wide if junctional <40 bpm; narrow if junctional 40-60 bpm',
+vitals:{Rate:'Atria 60-100 / Ventricles 20-60',Rhythm:'Both regular — NOT related',PWaves:'Present normal rate',QRS:'Wide or narrow',PR:'None (variable)'},
+key:'Atria and ventricles fire independently. No P-wave conducts. Rate depends on escape pacemaker location: junctional (40-60, narrow) vs ventricular (20-40, wide). Always symptomatic if ventricular rate.',
+tx:'Symptomatic: Atropine often ineffective in complete block (acts above block). TCP (transcutaneous pacing). Dopamine/Epinephrine infusion. Transvenous pacing at hospital.'},
+{name:'Atrial Fibrillation (AF)',
+strip:'P waves: absent — replaced by irregular fibrillatory baseline (350-600/min atrial activity)\nQRS: narrow (unless aberrant conduction), IRREGULARLY IRREGULAR\nRate: ventricular rate 100-180 (uncontrolled) or <100 (controlled)',
+vitals:{Rate:'100-180 uncontrolled',Rhythm:'Irregularly irregular',PWaves:'Absent (fibrillatory)',QRS:'Narrow (usually)',PR:'None'},
+key:'IRREGULARLY IRREGULAR is the hallmark. No two R-R intervals are equal. AF with RVR (rapid ventricular response) and hemodynamic compromise requires cardioversion. AF >48h: anticoagulation before cardioversion to prevent embolism.',
+tx:'Unstable: Synchronized cardioversion (120-200J biphasic). Stable: Rate control — diltiazem 0.25 mg/kg IV, or metoprolol, or amiodarone. Do NOT give adenosine or digoxin.'},
+{name:'Supraventricular Tachycardia (SVT / AVNRT)',
+strip:'P waves: absent or hidden in QRS/T wave (retrograde P waves may appear after QRS)\nQRS: narrow (<0.12s), regular, rapid\nRate: 150-250 bpm | Abrupt onset and termination ("paroxysmal")',
+vitals:{Rate:'150-250',Rhythm:'Regular',PWaves:'Hidden or retrograde',QRS:'Narrow <0.12s',PR:'None or very short'},
+key:'Sudden onset regular narrow tachycardia = SVT until proven otherwise. Rate often exactly 150 → consider atrial flutter with 2:1 block. Vagal maneuvers first (Valsalva, carotid sinus — NOT elderly/carotid bruit).',
+tx:'Stable: Vagal maneuvers → Adenosine 6mg rapid IVP (then 12mg x2). Unstable: Synchronized cardioversion (50-100J). AVOID adenosine in WPW/irregular/wide complex.'},
+{name:'Atrial Flutter',
+strip:'P waves: replaced by SAWTOOTH flutter waves at 250-350/min (usually 300)\n2:1 block = ventricular rate ~150 | 4:1 = ventricular rate ~75\nQRS: narrow, regular or regularly irregular',
+vitals:{Rate:'150 (2:1) or 75 (4:1)',Rhythm:'Regular',PWaves:'Sawtooth ~300/min',QRS:'Narrow',PR:'Fixed ratio'},
+key:'Rate of exactly 150 = atrial flutter with 2:1 block until proven otherwise. Classic sawtooth best seen in II, III, aVF. Vagal maneuvers increase block (slow rate) and reveal flutter waves.',
+tx:'Unstable: Synchronized cardioversion (start 50-100J). Stable: Rate control similar to AF. Electrical cardioversion highly effective for flutter. Do not use adenosine for flutter (temporarily unmasks, not therapeutic).'},
+{name:'Ventricular Tachycardia (Stable)',
+strip:'P waves: absent or dissociated | QRS: wide (>0.12s), monomorphic, rapid\nRate: 100-200 bpm | Rhythm: Regular\nAV dissociation: P waves march through at independent rate',
+vitals:{Rate:'100-200',Rhythm:'Regular',PWaves:'Dissociated',QRS:'>0.12s wide',PR:'None/dissociated'},
+key:'Wide complex regular tachycardia = VT until proven otherwise. Concordance (all QRS deflections same direction V1-V6), AV dissociation, fusion beats, and capture beats all support VT diagnosis. Brugada criteria. Do NOT assume SVT with aberrancy.',
+tx:'Stable with pulse: Amiodarone 150mg IV over 10 min, or lidocaine 1-1.5 mg/kg. If deteriorates or no response: synchronized cardioversion. Do NOT give verapamil for wide complex tachycardia.'},
+{name:'Sinus Bradycardia',
+strip:'P waves: normal, upright in II, before every QRS | PR interval: 0.12-0.20s (normal)\nQRS: narrow (<0.12s) | Rate: <60 bpm | Rhythm: regular',
+vitals:{Rate:'<60',Rhythm:'Regular',PWaves:'Normal, before each QRS',QRS:'Narrow',PR:'Normal 0.12-0.20s'},
+key:'Sinus bradycardia is ONLY treated if SYMPTOMATIC (hypotension, AMS, chest pain, pulmonary edema, syncope). Common benign cause: athletic training, sleep. Pathologic: inferior MI (RCA to SA node), hypothyroidism, hypothermia, drug toxicity (beta-blockers, digoxin, CCBs), increased ICP.',
+tx:'Asymptomatic: observe. Symptomatic: Atropine 0.5mg IV q3-5 min (max 3mg). Fails → TCP. Dopamine or Epinephrine infusion as alternative. Treat reversible cause.'},
+{name:'Ventricular Asystole',
+strip:'P waves: may be present (P-wave asystole) or absent | QRS: absent\nRate: 0 | Completely flat or very minimal artifact\nConfirm in 2 leads — VF can mimic asystole in one lead',
+vitals:{Rate:'0',Rhythm:'None',PWaves:'Absent (or P-wave only)',QRS:'Absent',PR:'None'},
+key:'Confirm asystole in 2 leads — fine VF can appear flat in one lead. Check leads, connections, gain. P-wave asystole (P waves with no QRS) — pacing may succeed. Most asystole patients have poor prognosis. Address reversible causes (5H/5T).',
+tx:'CPR immediately. Epinephrine 1mg IV/IO q3-5 min. TCP may be attempted for P-wave asystole. NO defibrillation for asystole. Treat reversible causes. Resuscitation duration per protocol/medical direction.'}
+];
+
+const SCENARIOS=[
+{title:'STEMI Alert',badge:'Cardiology',color:'rgba(230,57,70,.15)',borderColor:'rgba(230,57,70,.4)',badgeColor:'var(--red2)',
+dispatch:'Dispatch: 58M, chest pain 45 min, diaphoresis. Home address. ETA 6 min.',
+vitals:'HR 90 reg | BP 104/68 | SpO₂ 94% | RR 18 | GCS 15 | Pale, diaphoretic',
+steps:[
+{q:'Scene: Patient sitting on couch, clutching chest. First actions?',a:'12-lead ECG immediately (goal <10 min from contact). Aspirin 324mg chewed. O₂ if SpO₂ <94%. IV access x2. Brief history: onset, radiation, prior cardiac Hx, medications, last meal.'},
+{q:'12-lead shows ST elevation in II, III, aVF and V4R. What does this tell you and what does V4R change?',a:'Inferior STEMI (II, III, aVF = RCA territory). V4R elevation confirms RIGHT VENTRICULAR involvement. RV MI means: HOLD nitroglycerin (will cause severe hypotension — patient is preload-dependent). Give IV fluid bolus 250-500mL NS instead for hypotension.'},
+{q:'BP drops to 78/40 after partner gives nitroglycerin en route. Action?',a:'Lay patient flat (Trendelenburg if tolerated). IV fluid bolus 250-500mL wide open. Notify receiving facility immediately — STEMI alert with RV MI and cardiogenic shock. If BP remains low: dopamine 5-10 mcg/kg/min. Do NOT give more nitro.'},
+{q:'Receiving hospital is 22 minutes away. A closer non-PCI hospital is 8 minutes. Which do you choose?',a:'STEMI with hemodynamic compromise → PCI-capable facility preferred (door-to-balloon time). However, if patient deteriorates or arrests, closest ED wins. Per local protocol, call medical direction. NAEMSP/AHA recommend PCI center if transport time difference <30 min.'}]},
+{title:'Anaphylaxis Arrest',badge:'Medical',color:'rgba(123,104,238,.15)',borderColor:'rgba(123,104,238,.4)',badgeColor:'#a78bfa',
+dispatch:'Dispatch: 24F, bee sting, difficulty breathing, not responding. Backyard.',
+vitals:'HR 140 weak | BP 60/P | SpO₂ unable to obtain | Stridor audible | GCS 8 | Hives face/neck/trunk',
+steps:[
+{q:'Scene: Patient semi-conscious, stridor, hives, BP 60/P. Immediate actions?',a:'Epinephrine 1:1,000 0.3-0.5mg IM lateral thigh IMMEDIATELY — this is first-line, do not delay. O₂ high-flow. Position: supine with legs elevated (unless respiratory distress worsens). IV access. Call for ALS backup if BLS unit.'},
+{q:'After epinephrine IM x1, BP is 72/40, stridor persists. Next steps?',a:'Repeat epinephrine IM at 5-15 min if inadequate response. Albuterol 2.5mg nebulized for bronchospasm. IV fluid bolus 1-2L NS for distributive shock. Diphenhydramine 25-50mg IV (adjunct — not first-line). Consider epinephrine infusion if refractory.'},
+{q:'Patient becomes apneic, unresponsive, no pulse. Approach?',a:'Cardiac arrest secondary to anaphylaxis: CPR. Epinephrine 1mg 1:10,000 IV/IO q3-5 min. Airway management — BVM first; may have severe laryngeal edema requiring surgical airway. IV fluid resuscitation. Continue anaphylaxis treatment alongside ACLS.'},
+{q:'After ROSC, patient asks why she needs to carry an EpiPen. What do you tell her?',a:'Anaphylaxis can recur without re-exposure (biphasic reaction, 6-12 hours later in up to 20% of cases). Hospital observation required minimum 4-6 hours. Epinephrine auto-injector (0.3mg EpiPen) is life-saving first-line treatment. All anaphylaxis patients need allergy referral and action plan.'}]},
+{title:'RSI Decision',badge:'Airway',color:'rgba(46,196,182,.15)',borderColor:'rgba(46,196,182,.4)',badgeColor:'var(--teal)',
+dispatch:'Dispatch: 32M, motorcycle vs semi. Unrestrained. Down approx 10 min. Bystander CPR ongoing.',
+vitals:'GCS 6 (E1V2M3) | HR 54 reg | BP 88/54 | SpO₂ 88% on NRB | RR 8 irregular | Left pupil 6mm fixed',
+steps:[
+{q:'Patient has GCS 6, RR 8 irregular, SpO₂ 88%. Is RSI indicated? What is your airway decision?',a:'YES — RSI indicated. Indications met: unable to protect airway (GCS<8), inadequate ventilation, anticipated deterioration. Prepare: preoxygenate BVM 3-5 min (SpO₂ target >95% before induction). Fixed dilated pupil = probable herniation — RSI AND rapid transport simultaneously.'},
+{q:'RSI decision made. Succinylcholine or rocuronium — and why does it matter here?',a:'Either is acceptable here (no contraindications). With pupil changes suggesting herniation: succinylcholine (faster, 45 sec) may be preferred for speed. Rocuronium 1.2 mg/kg onset 60-90 sec is acceptable with sugammadex available. Induction: ketamine 1.5-2 mg/kg (maintains BP) or etomidate 0.3 mg/kg.'},
+{q:'Post-intubation: ETCO₂ 50, BP 78/40, pupil remains fixed. Ventilation adjustments?',a:'Target ETCO₂ 35-40 mmHg — increase RR (not Vt) to achieve this. For active herniation (Cushing\'s triad, blown pupil): brief controlled hyperventilation ETCO₂ 30-35 as BRIDGE only. Treat hypotension (vasopressors, fluids). MAP target >80 mmHg for cerebral perfusion pressure.'},
+{q:'You confirm right mainstem intubation on auscultation (no left breath sounds). Action?',a:'Withdraw ETT 1-2 cm and reassess bilateral breath sounds. Confirm repositioning with waveform capnography and bilateral auscultation. Re-secure tube. Note new lip depth. Document pre- and post-correction ETCO₂ and SpO₂ values.'}]}
+];
+
+// ══════════════════════════════════
+// STATE
+// ══════════════════════════════════
+let progress=JSON.parse(localStorage.getItem('nremt_progress')||'{}');
+// progress[id]='correct'|'wrong'
+let quizQueue=[], quizIdx=0, quizAnswered=false;
+let currentCatFilter='all';
+
+function saveProgress(){localStorage.setItem('nremt_progress',JSON.stringify(progress))}
+function resetProgress(){if(confirm('Reset all progress?')){progress={};saveProgress();renderHome();}}
+
+// ══════════════════════════════════
+// NAVIGATION
+// ══════════════════════════════════
+function showPanel(id){
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('panel-'+id).classList.add('active');
+  const btns=document.querySelectorAll('.nav-btn');
+  const panelOrder=['home','quiz','random','drugs','rhythms','scenarios'];
+  const idx=panelOrder.indexOf(id);
+  if(btns[idx])btns[idx].classList.add('active');
+  if(id==='home')renderHome();
+  if(id==='drugs')renderDrugs();
+  if(id==='rhythms')renderRhythms();
+  if(id==='scenarios')renderScenarios();
+  if(id==='random'&&document.getElementById('random-area').innerHTML==='')startRandom();
+}
+
+// ══════════════════════════════════
+// HOME
+// ══════════════════════════════════
+function renderHome(){
+  const total=Object.keys(progress).length;
+  const correct=Object.values(progress).filter(v=>v==='correct').length;
+  document.getElementById('st-total').textContent=total;
+  document.getElementById('st-pct').textContent=total?Math.round(correct/total*100)+'%':'—';
+  // streak
+  const streak=parseInt(localStorage.getItem('nremt_streak')||'0');
+  document.getElementById('st-streak').textContent=streak;
+  // category cards
+  const cats=['A','C','T','M','O'];
+  const catNames={A:'Airway',C:'Cardiology',T:'Trauma',M:'Medical',O:'Operations'};
+  const catColors={A:'var(--teal)',C:'var(--red)',T:'var(--gold)',M:'#a78bfa',O:'#4ade80'};
+  let html='';
+  cats.forEach(c=>{
+    const qs=QUESTIONS.filter(q=>q.cat===c);
+    const done=qs.filter(q=>progress[q.id]);
+    const corr=qs.filter(q=>progress[q.id]==='correct');
+    const pct=done.length?Math.round(corr.length/done.length*100):0;
+    const fillPct=Math.round(done.length/qs.length*100);
+    html+=`<div class="cat-card" onclick="showPanel('quiz');startQuiz('${c}')">
+      <div class="cat-name" style="color:${catColors[c]}">${catNames[c]}</div>
+      <div class="cat-pct">${CAT_PCT[c]} of NREMT exam</div>
+      <div class="cat-bar"><div class="cat-fill" style="width:${fillPct}%;background:${catColors[c]}"></div></div>
+      <div class="cat-score">${done.length}/${qs.length} attempted${done.length?` · ${pct}% correct`:''}</div>
+    </div>`;
+  });
+  document.getElementById('cat-grid').innerHTML=html;
+}
+
+// ══════════════════════════════════
+// QUIZ
+// ══════════════════════════════════
+function startQuiz(cat){
+  document.getElementById('quiz-cat-select').style.display='none';
+  document.getElementById('quiz-area').style.display='block';
+  const pool=cat==='all'?QUESTIONS:QUESTIONS.filter(q=>q.cat===cat);
+  quizQueue=[...pool].sort(()=>Math.random()-.5);
+  quizIdx=0; quizAnswered=false;
+  renderQuestion();
+}
+function renderQuestion(){
+  if(quizIdx>=quizQueue.length){
+    document.getElementById('quiz-area').innerHTML=`<div class="empty-state"><div style="font-size:48px;margin-bottom:12px">🏁</div><div style="font-size:20px;font-weight:700;color:var(--text)">Set Complete</div><div style="margin:8px 0 20px;color:var(--muted)">All questions answered.</div><button class="btn-primary" onclick="showPanel('quiz');document.getElementById('quiz-cat-select').style.display='block';document.getElementById('quiz-area').style.display='none'">Back to Categories</button></div>`;
+    return;
+  }
+  const q=quizQueue[quizIdx];
+  const seen=progress[q.id];
+  const dots=quizQueue.slice(0,quizIdx).map(qq=>`<div class="score-dot ${progress[qq.id]==='correct'?'c':progress[qq.id]==='wrong'?'w':''}"></div>`).join('');
+  document.getElementById('quiz-area').innerHTML=`
+    <div class="quiz-header">
+      <div><span class="quiz-cat-badge badge-${q.cat}">${CAT_NAMES[q.cat]}</span></div>
+      <div class="quiz-progress">${quizIdx+1} / ${quizQueue.length}</div>
+    </div>
+    <div class="score-strip">${dots}</div>
+    <div class="question-card" id="qcard">
+      <div class="question-num">Question ${quizIdx+1}</div>
+      <div class="question-text">${q.q}</div>
+      <div class="options" id="opts">${q.opts.map((o,i)=>`<button class="option" onclick="answerQ(${i})" id="opt${i}"><span class="opt-letter">${'ABCD'[i]}</span>${o}</button>`).join('')}</div>
+    </div>
+    <div class="rationale-box" id="rationale">
+      <div class="rationale-title">📋 Rationale</div>
+      <div class="rationale-text">${q.rationale}</div>
+    </div>
+    <div class="resources-box" id="resources">
+      <div class="resources-title">📚 Further Study</div>
+      <ul class="resources-list">${q.links.map(l=>`<li><a href="${l.u}" target="_blank" rel="noopener">↗ ${l.t}</a></li>`).join('')}</ul>
+    </div>
+    <div class="quiz-nav" id="qnav" style="display:none">
+      <button class="btn-sec" onclick="prevQ()" ${quizIdx===0?'disabled':''}>← Prev</button>
+      <button class="btn-primary" onclick="nextQ()">Next →</button>
+    </div>`;
+}
+function answerQ(i){
+  if(quizAnswered)return;
+  quizAnswered=true;
+  const q=quizQueue[quizIdx];
+  const correct=i===q.ans;
+  progress[q.id]=correct?'correct':'wrong';
+  saveProgress();
+  document.querySelectorAll('.option').forEach((o,idx)=>{
+    o.classList.add('disabled');
+    if(idx===q.ans)o.classList.add('correct');
+    else if(idx===i&&!correct)o.classList.add('wrong');
+  });
+  document.getElementById('qcard').classList.add(correct?'correct-flash':'wrong-flash');
+  document.getElementById('rationale').classList.add('show');
+  document.getElementById('resources').classList.add('show');
+  document.getElementById('qnav').style.display='flex';
+  updateStreak(correct);
+  renderHome();
+}
+function nextQ(){quizIdx++;quizAnswered=false;renderQuestion()}
+function prevQ(){if(quizIdx>0){quizIdx--;quizAnswered=!!progress[quizQueue[quizIdx].id];renderQuestion();if(quizAnswered){document.querySelectorAll('.option').forEach((o,i)=>{o.classList.add('disabled');if(i===quizQueue[quizIdx].ans)o.classList.add('correct');});document.getElementById('rationale').classList.add('show');document.getElementById('resources').classList.add('show');document.getElementById('qnav').style.display='flex';}}}
+function updateStreak(correct){
+  if(correct){const s=parseInt(localStorage.getItem('nremt_streak')||'0');localStorage.setItem('nremt_streak',s+1);}
+  else localStorage.setItem('nremt_streak','0');
+}
+
+// ══════════════════════════════════
+// RANDOM
+// ══════════════════════════════════
+function startRandom(){
+  const unanswered=QUESTIONS.filter(q=>!progress[q.id]);
+  const pool=unanswered.length>0?unanswered:QUESTIONS;
+  const q=pool[Math.floor(Math.random()*pool.length)];
+  renderRandomQ(q);
+}
+function renderRandomQ(q){
+  document.getElementById('random-area').innerHTML=`
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+      <span class="quiz-cat-badge badge-${q.cat}">${CAT_NAMES[q.cat]}</span>
+      <button class="btn-sec" style="padding:6px 14px;font-size:11px" onclick="startRandom()">↻ New Random</button>
+    </div>
+    <div class="question-card" id="rqcard">
+      <div class="question-num">Random Question</div>
+      <div class="question-text">${q.q}</div>
+      <div class="options">${q.opts.map((o,i)=>`<button class="option" onclick="answerRandom(${i},'${q.id}')" id="ropt${i}"><span class="opt-letter">${'ABCD'[i]}</span>${o}</button>`).join('')}</div>
+    </div>
+    <div class="rationale-box" id="rrationale">
+      <div class="rationale-title">📋 Rationale</div>
+      <div class="rationale-text">${q.rationale}</div>
+    </div>
+    <div class="resources-box" id="rresources">
+      <div class="resources-title">📚 Further Study</div>
+      <ul class="resources-list">${q.links.map(l=>`<li><a href="${l.u}" target="_blank" rel="noopener">↗ ${l.t}</a></li>`).join('')}</ul>
+    </div>
+    <div style="display:none" id="rnav">
+      <button class="btn-primary" style="width:100%;margin-top:8px" onclick="startRandom()">Next Random Question →</button>
+    </div>`;
+  // Store answer key
+  document.getElementById('random-area').dataset.ans=q.ans;
+  document.getElementById('random-area').dataset.qid=q.id;
+}
+function answerRandom(i,qid){
+  const ans=parseInt(document.getElementById('random-area').dataset.ans);
+  const correct=i===ans;
+  progress[qid]=correct?'correct':'wrong';
+  saveProgress();
+  document.querySelectorAll('[id^="ropt"]').forEach((o,idx)=>{
+    o.classList.add('disabled');
+    if(idx===ans)o.classList.add('correct');
+    else if(idx===i&&!correct)o.classList.add('wrong');
+  });
+  document.getElementById('rrationale').classList.add('show');
+  document.getElementById('rresources').classList.add('show');
+  document.getElementById('rnav').style.display='block';
+  updateStreak(correct);
+  renderHome();
+}
+
+// ══════════════════════════════════
+// DRUGS
+// ══════════════════════════════════
+function filterDrugs(cat,btn){
+  currentCatFilter=cat;
+  document.querySelectorAll('.filter-chip').forEach(c=>c.classList.remove('active'));
+  btn.classList.add('active');
+  renderDrugs();
+}
+function renderDrugs(){
+  const list=currentCatFilter==='all'?DRUGS:DRUGS.filter(d=>d.cat===currentCatFilter);
+  document.getElementById('drug-list').innerHTML=list.map((d,i)=>`
+    <div class="drug-card" onclick="toggleDrug(${i})">
+      <div class="drug-front">
+        <div><div class="drug-name">${d.name}</div><div class="drug-class">${d.cls}</div></div>
+        <div class="drug-expand" id="dex${i}">›</div>
+      </div>
+      <div class="drug-body" id="db${i}">
+        <div class="drug-row"><div class="drug-lbl">Dose</div><div class="drug-val">${d.dose}</div></div>
+        <div class="drug-row"><div class="drug-lbl">Onset</div><div class="drug-val">${d.onset}</div></div>
+        <div class="drug-row"><div class="drug-lbl">Indications</div><div class="drug-val">${d.ind}</div></div>
+        <div class="drug-row"><div class="drug-lbl">Contraindications</div><div class="drug-val danger">${d.contra}</div></div>
+        <div class="drug-row"><div class="drug-lbl">Warnings</div><div class="drug-val warn">${d.warn}</div></div>
+        <div class="drug-row"><div class="drug-lbl">Mechanism</div><div class="drug-val">${d.mech}</div></div>
+      </div>
+    </div>`).join('');
+}
+function toggleDrug(i){
+  const b=document.getElementById(`db${i}`);
+  const e=document.getElementById(`dex${i}`);
+  const open=b.classList.toggle('open');
+  e.style.transform=open?'rotate(90deg)':'rotate(0)';
+}
+
+// ══════════════════════════════════
+// RHYTHMS
+// ══════════════════════════════════
+function renderRhythms(){
+  document.getElementById('rhythm-list').innerHTML=RHYTHMS.map(r=>`
+    <div class="rhythm-card">
+      <div class="rhythm-name">${r.name}</div>
+      <div class="rhythm-vitals">
+        ${Object.entries(r.vitals).map(([k,v])=>`<div class="rv">${k}: <span>${v}</span></div>`).join('')}
+      </div>
+      <div class="rhythm-strip">${r.strip}</div>
+      <div class="rhythm-key"><div class="rhythm-key-title">🔑 Key Features</div><div class="rhythm-key-list">${r.key}</div></div>
+      <div class="rhythm-tx"><div class="rhythm-tx-title">⚡ Treatment</div><div style="font-size:13px;color:var(--muted);line-height:1.65">${r.tx}</div></div>
+    </div>`).join('');
+}
+
+// ══════════════════════════════════
+// SCENARIOS
+// ══════════════════════════════════
+function renderScenarios(){
+  document.getElementById('scenario-list').innerHTML=SCENARIOS.map((s,si)=>`
+    <div class="scenario-card">
+      <div class="scenario-badge" style="background:${s.color};border:1px solid ${s.borderColor};color:${s.badgeColor}">🚨 ${s.badge}</div>
+      <div style="font-size:19px;font-weight:800;color:var(--text);margin-bottom:10px">${s.title}</div>
+      <div class="dispatch-box"><div class="dispatch-hdr">DISPATCH</div>${s.dispatch}</div>
+      <div style="font-size:12px;font-weight:700;color:var(--dim);letter-spacing:.1em;text-transform:uppercase;margin:10px 0 6px">Arrival Vitals</div>
+      <div style="font-size:13px;color:var(--muted);line-height:1.9;background:var(--card2);border-radius:6px;padding:10px 12px;margin-bottom:12px">${s.vitals}</div>
+      <div class="section-title" style="margin-bottom:8px">Decision Points</div>
+      <div class="scene-steps">${s.steps.map((st,i)=>`<div class="step"><div class="step-q" onclick="toggleStep(${si},${i})"><span>🔹 ${st.q}</span><span style="color:var(--dim);font-size:18px" id="sarr${si}-${i}">›</span></div><div class="step-a" id="sa${si}-${i}">${st.a}</div></div>`).join('')}</div>
+    </div>`).join('');
+}
+function toggleStep(si,i){
+  const a=document.getElementById(`sa${si}-${i}`);
+  const arr=document.getElementById(`sarr${si}-${i}`);
+  const open=a.classList.toggle('show');
+  arr.style.transform=open?'rotate(90deg)':'';
+}
+
+// ══════════════════════════════════
+// INIT
+// ══════════════════════════════════
+renderHome();
+</script>
+</body>
+</html>
